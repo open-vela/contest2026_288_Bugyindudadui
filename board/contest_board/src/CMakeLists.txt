@@ -22,6 +22,10 @@
 
 set(SRCS esp32p4_boot.c esp32p4_bringup.c esp32p4_appinit.c)
 
+if(CONFIG_DEV_GPIO)
+  list(APPEND SRCS esp32p4_gpio.c)
+endif()
+
 if(CONFIG_BOARDCTL_RESET)
   list(APPEND SRCS esp32p4_reset.c)
 endif()

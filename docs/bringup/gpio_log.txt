@@ -1,0 +1,160 @@
+============================================================
+GPIO Bring-up 真机验收日志
+日期: 2026-08-10
+板卡: ESP32-P4X-Function-EV-Board V1.6 (revision v3.2)
+固件: NuttX 0.0.0 dd92bcf4257-dirty Aug 10 2026 21:37:59
+分支: feat/gpio-bringup
+============================================================
+
+--- 芯片识别 ---
+
+esptool v5.3.1
+Serial port /dev/ttyACM0:
+Connecting...
+Connected to ESP32-P4 on /dev/ttyACM0:
+Chip type:          ESP32-P4 (revision v3.2)
+Features:           Dual Core + LP Core, 400MHz
+Crystal frequency:  40MHz
+USB mode:           USB-Serial/JTAG
+MAC:                e8:f6:0a:e3:a9:17
+
+--- 烧录 ---
+
+Wrote 228436 bytes (94409 compressed) at 0x00002000 in 2.1 seconds (885.0 kbit/s).
+Hash of data verified.
+Hard resetting via RTS pin...
+
+--- 测试 1: 设备存在 ---
+
+nsh> ls /dev
+/dev:
+ console
+ gpio0
+ null
+ random
+ ttyACM0
+ zero
+
+结果: PASS - /dev/gpio0 存在
+
+--- 测试 2: 输出高电平 ---
+
+nsh> gpio -o 1 /dev/gpio0
+Driver: /dev/gpio0
+  Output pin:    Value=0
+  Writing:       Value=1
+  Verify:        Value=1
+
+结果: PASS - 写入 1，回读 1
+
+--- 测试 3: 输出低电平 ---
+
+nsh> gpio -o 0 /dev/gpio0
+Driver: /dev/gpio0
+  Output pin:    Value=1
+  Writing:       Value=0
+  Verify:        Value=0
+
+结果: PASS - 写入 0，回读 0
+
+--- 测试 4: 连续切换 ---
+
+nsh> gpio -o 1 /dev/gpio0
+Driver: /dev/gpio0
+  Output pin:    Value=0
+  Writing:       Value=1
+  Verify:        Value=1
+
+nsh> gpio -o 0 /dev/gpio0
+Driver: /dev/gpio0
+  Output pin:    Value=1
+  Writing:       Value=0
+  Verify:        Value=0
+
+nsh> gpio -o 1 /dev/gpio0
+Driver: /dev/gpio0
+  Output pin:    Value=0
+  Writing:       Value=1
+  Verify:        Value=1
+
+nsh> gpio -o 0 /dev/gpio0
+Driver: /dev/gpio0
+  Output pin:    Value=1
+  Writing:       Value=0
+  Verify:        Value=0
+
+结果: PASS - 4 次切换全部 Verify 正确
+
+--- 测试 5: 原有功能验证 ---
+
+nsh> help
+help usage:  help [-v] [<cmd>]
+    .           cp          exit        ls          reboot      truncate
+    [           cmp         expr        mkdir       rm          uname
+    ?           dirname     false       mkrd        rmdir       umount
+    alias       dd          fdinfo      mount       set         unset
+    unalias     df          free        mv          sleep       uptime
+    basename    dmesg       help        pidof       source      usleep
+    break       echo        hexdump     printf      test        watch
+    cat         env         kill        ps          time        xd
+    cd          exec        pkill       pwd         true        wait
+Builtin Apps:
+    dumpstack    gpio         nsh          sh
+
+nsh> free
+      total       used       free    maxused    maxfree  nused  nfree name
+     491608       6976     484632      10616     484200     32      2 Umem
+
+nsh> ps
+  PID GROUP PRI POLICY   TYPE    NPX STATE    EVENT     SIGMASK            STACK COMMAND
+    0     0   0 FIFO     Kthread   - Ready              0000000000000000 0002016 CPU0 IDLE
+    2     2 100 RR       Task      - Running            0000000000000000 0001984 nsh_main
+
+nsh> uname -a
+NuttX 0.0.0 dd92bcf4257-dirty Aug 10 2026 21:37:59 risc-v contest2026_288_board
+
+结果: PASS - help, free, ps, uname 均正常
+
+--- 测试 6: 复位后验证 ---
+
+(按下 RESET 按钮，重新连接串口)
+
+nsh> ls /dev
+/dev:
+ console
+ gpio0
+ null
+ random
+ ttyACM0
+ zero
+
+nsh> gpio -o 1 /dev/gpio0
+Driver: /dev/gpio0
+  Output pin:    Value=0
+  Writing:       Value=1
+  Verify:        Value=1
+
+nsh> gpio -o 0 /dev/gpio0
+Driver: /dev/gpio0
+  Output pin:    Value=1
+  Writing:       Value=0
+  Verify:        Value=0
+
+结果: PASS - 复位后 /dev/gpio0 正常存在，GPIO 切换正常
+      复位后默认值为 0（低电平），符合代码初始化逻辑
+
+============================================================
+验收总结
+============================================================
+
+| 验收项 | 结果 |
+| --- | --- |
+| clean build 成功 | PASS |
+| /dev/gpio0 存在 | PASS |
+| NSH 能切换高低电平 | PASS |
+| Verify 回读值正确 | PASS |
+| 复位后仍能正常进入 NSH | PASS |
+| help、free、ps 不受影响 | PASS |
+| 万用表/LED 物理测量 | 待补充（暂无仪器） |
+
+============================================================

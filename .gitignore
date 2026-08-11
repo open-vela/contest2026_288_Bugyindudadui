@@ -12,6 +12,9 @@ Make.dep
 # Large third-party source prepared by board tooling
 board/contest_board/chip/esp-hal-3rdparty/
 
+# Local Pcode workspace
+Pcode/
+
 # Local generated reports; official AI Coding submissions live under logs/
 AI_CODING_LOG_SETUP_SUMMARY.md
 ai-coding-log-report.html

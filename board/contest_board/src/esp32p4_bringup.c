@@ -74,5 +74,16 @@ int esp_bringup(void)
     }
 #endif
 
+#ifdef CONFIG_DEV_GPIO
+  /* 初始化 GPIO 输出设备，注册 /dev/gpout0
+   * 只有 defconfig 里 CONFIG_DEV_GPIO=y 时才会编译这段 */
+
+  ret = esp_gpio_init();
+  if (ret < 0)
+    {
+      _err("Failed to initialize GPIO Driver: %d\n", ret);
+    }
+#endif
+
   return ret;
 }

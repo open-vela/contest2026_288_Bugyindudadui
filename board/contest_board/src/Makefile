@@ -24,6 +24,10 @@ include $(TOPDIR)/Make.defs
 
 CSRCS = esp32p4_boot.c esp32p4_bringup.c
 
+ifeq ($(CONFIG_DEV_GPIO),y)
+  CSRCS += esp32p4_gpio.c
+endif
+
 ifeq ($(CONFIG_BOARDCTL),y)
   CSRCS += esp32p4_appinit.c
   ifeq ($(CONFIG_BOARDCTL_RESET),y)
