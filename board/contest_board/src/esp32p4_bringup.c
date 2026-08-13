@@ -75,7 +75,7 @@ int esp_bringup(void)
 #endif
 
 #ifdef CONFIG_DEV_GPIO
-  /* 初始化 GPIO 输出设备，注册 /dev/gpout0
+  /* 初始化 GPIO 输出设备，注册 /dev/gpio0
    * 只有 defconfig 里 CONFIG_DEV_GPIO=y 时才会编译这段 */
 
   ret = esp_gpio_init();

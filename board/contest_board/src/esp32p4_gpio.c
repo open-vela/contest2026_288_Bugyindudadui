@@ -21,12 +21,12 @@
  ****************************************************************************/
 
 /****************************************************************************
- * GPIO4 输出驱动 - 注册为 /dev/gpout0
+ * GPIO4 输出驱动 - 注册为 /dev/gpio0
  *
  * 工作原理：
  *   1. 定义一个 gpio_operations_s 结构体，包含 read/write 函数指针
  *   2. 在 esp_gpio_init() 中把这个结构体注册给内核
- *   3. 内核自动创建 /dev/gpout0 设备节点
+ *   3. 内核自动创建 /dev/gpio0 设备节点
  *   4. 用户空间通过 gpio 命令或 ioctl 操作这个设备
  ****************************************************************************/
 
@@ -124,7 +124,7 @@ static const struct gpio_operations_s gpout_ops =
 
 static const uint32_t g_gpiooutputs[BOARD_NGPIOOUT] =
 {
-  GPIO_OUT1,   /* 索引 0 -> GPIO4 -> 将注册为 /dev/gpout0 */
+  GPIO_OUT1,   /* 索引 0 -> GPIO4 -> 将注册为 /dev/gpio0 */
 };
 
 /* 设备实例数组 - 每个输出引脚一个 */
@@ -242,7 +242,9 @@ static int gpout_setpintype(struct gpio_dev_s *dev,
 
 int esp_gpio_init(void)
 {
+  int pincount = 0;
   int i;
+  int ret;
 
   for (i = 0; i < BOARD_NGPIOOUT; i++)
     {
@@ -253,9 +255,15 @@ int esp_gpio_init(void)
       g_gpout[i].id              = i;                 /* 记录数组索引 */
 
       /* --- 第二步：注册设备节点 ---
-       * i=0 时注册为 /dev/gpout0 */
+       * i=0 时注册为 /dev/gpio0 */
 
-      gpio_pin_register(&g_gpout[i].gpio, i);
+      ret = gpio_pin_register(&g_gpout[i].gpio, pincount);
+      if (ret < 0)
+        {
+          syslog(LOG_ERR, "ERROR: Failed to register /dev/gpio%d: %d\n",
+                 pincount, ret);
+          return ret;
+        }
 
       /* --- 第三步：配置物理引脚硬件 --- */
 
@@ -271,6 +279,8 @@ int esp_gpio_init(void)
       /* 初始输出低电平（0V） */
 
       esp_gpiowrite(g_gpiooutputs[i], 0);
+
+      pincount++;
     }
 
   return OK;

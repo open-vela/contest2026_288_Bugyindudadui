@@ -44,6 +44,7 @@
 - `esp_configgpio(pin, INPUT | OUTPUT)` 不带 FUNCTION 标志，让引脚选择 PIN_FUNC_GPIO 模式
 - `esp_gpio_matrix_out()` 将引脚路由到简单 GPIO 输出信号（SIG_GPIO_OUT_IDX）
 - 不使用 `OUTPUT_FUNCTION_1`，那会将引脚绑定到外设功能而非纯 GPIO
+- `gpio_pin_register()` 返回值需检查，失败时返回负 errno
 
 ## NSH 操作命令
 
@@ -67,22 +68,77 @@ gpio -h
 - 复位后 `/dev/gpio0` 正常存在
 - NSH 功能不受影响 (help, free, ps 正常)
 
-## 构建命令
+## 复现步骤
+
+以下命令均相对于 openvela 工程根目录（即 `repo sync` 后的顶层目录）执行。
+
+### 1. 准备 ESP HAL
+
+ESP32-P4 构建依赖固定版本的 `esp-hal-3rdparty`，需先执行脚本克隆并打补丁：
 
 ```bash
-cd /home/mi/openVela/code/openvela
+cd contest2026_288_Bugyindudadui
+bash board/contest_board/tools/prepare_esp_hal.sh
+```
+
+固定 HAL commit：`b90b1837cb5ad24747deb4c895246037cc206ce5`
+
+### 2. 清除旧构建产物（distclean）
+
+如果之前构建过其他配置，先执行 distclean：
+
+```bash
+cd nuttx
+make distclean
+cd ..
+```
+
+### 3. 构建
+
+```bash
 PATH="$HOME/.local/bin:$PATH" ./build.sh vendor/openvela/boards/contest2026_288_board/configs/nsh
 ```
 
-## 烧录命令
+构建成功标志：输出末尾包含 `Generated: nuttx.bin`。
+
+构建产物：`nuttx/nuttx.bin`（ESP32-P4 Simple Boot RAM image，烧录偏移 `0x2000`）。
+
+### 4. 烧录
 
 ```bash
 sudo chmod 666 /dev/ttyACM0
-PATH="$HOME/.local/bin:$PATH" esptool --chip esp32p4 --port /dev/ttyACM0 --baud 921600 write_flash 0x2000 nuttx/nuttx.bin
+PATH="$HOME/.local/bin:$PATH" esptool --chip esp32p4 --port /dev/ttyACM0 --baud 921600 \
+  write_flash 0x2000 nuttx/nuttx.bin
 ```
 
-## 分支
+烧录成功标志：`Hash of data verified.`
 
+### 5. 串口验证
+
+```bash
+picocom -b 115200 --noreset /dev/ttyACM0
 ```
-feat/gpio-bringup
-```
+
+## 当前验证状态
+
+### 已验证
+
+- `/dev/gpio0` 设备节点注册成功
+- NSH `gpio -o 1 /dev/gpio0` 写入后 GPIO 输入路径回读 Verify=1
+- NSH `gpio -o 0 /dev/gpio0` 写入后 GPIO 输入路径回读 Verify=0
+- 连续切换 4 次均回读正确
+- 复位后设备恢复正常，NSH 功能（help、free、ps）不受影响
+
+### 待验证
+
+- J1 Pin 18 (GPIO4) 的实际 0V/3.3V 物理电平输出（需万用表或逻辑分析仪测量）
+- 外接 LED 可视化验证
+
+> **注意**：当前 `Verify=0/1` 仅代表 GPIO 寄存器输入路径的回读值，
+> 不能作为 J1 Pin 18 已实际输出对应电压的物理证据。
+> 物理测量条件具备后将补充接线照片和测量结果。
+
+## 分支与提交
+
+- 分支：`feat/gpio-bringup`
+- 基线 commit：`e012c93`
