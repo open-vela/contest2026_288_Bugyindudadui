@@ -88,9 +88,7 @@ bash board/contest_board/tools/prepare_esp_hal.sh
 如果之前构建过其他配置，先执行 distclean：
 
 ```bash
-cd nuttx
-make distclean
-cd ..
+./build.sh vendor/openvela/boards/contest2026_288_board/configs/nsh distclean
 ```
 
 ### 3. 构建
